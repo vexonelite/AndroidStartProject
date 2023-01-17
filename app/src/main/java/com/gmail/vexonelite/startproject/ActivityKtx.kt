@@ -45,6 +45,10 @@ fun AppCompatActivity.replaceFragment(targetFragment: Fragment, @IdRes container
     }
 }
 
+/** ask if the permission WRITE_EXTERNAL_STORAGE has been granted.  */
+fun AppCompatActivity.hasWriteExternalStoragePermissionBeenGranted(): Boolean =
+    (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+
 /** ask if the permission ACCESS_COARSE_LOCATION has been granted.  */
 fun AppCompatActivity.hasCoarseLocationPermissionBeenGranted(): Boolean =
     (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)

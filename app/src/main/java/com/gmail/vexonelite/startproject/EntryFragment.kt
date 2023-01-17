@@ -20,7 +20,18 @@ import androidx.fragment.app.Fragment
 import com.gmail.vexonelite.startproject.databinding.FragmentEntryBinding
 import getLogTag
 import hasFineLocationPermissionBeenGranted
+import hasWriteExternalStoragePermissionBeenGranted
 import showLog
+import io.reactivex.rxjava3.core.Flowable
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Scheduler
+import io.reactivex.rxjava3.core.Single
+import io.reactivex.rxjava3.disposables.Disposable
+import io.reactivex.rxjava3.functions.Consumer
+import io.reactivex.rxjava3.functions.Function
+import io.reactivex.rxjava3.functions.Predicate
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 
 
 class EntryFragment : Fragment() {
@@ -79,14 +90,16 @@ class EntryFragment : Fragment() {
     private val myClickerLambda: (View) -> Unit = { view ->
         when (view.id) {
             R.id.button1 -> {
-                requestLocationPermissions()
-            }
-            R.id.button2 -> {
                 enableWiFiIfNeeded()
             }
+            R.id.button2 -> {
+                requestLocationPermissions()
+            }
             R.id.button3 -> {
+                requestWriteExternalStoragePermission()
             }
             R.id.button4 -> {
+                runRxTask1()
             }
             R.id.button5 -> {
             }
@@ -121,18 +134,18 @@ class EntryFragment : Fragment() {
         }
     }
 
-    private val locationActivityResultCallback: (Map<String, Boolean>) -> Unit = { resultsMap ->
+    private val locationPermissionsResultCallback: (Map<String, Boolean>) -> Unit = { resultsMap ->
         val result: Boolean = resultsMap.contains(Manifest.permission.ACCESS_FINE_LOCATION) && resultsMap.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
-        showLog(Log.INFO, getLogTag(), "locationActivityResultCallback - result: [$result]")
+        showLog(Log.INFO, getLogTag(), "locationPermissionsResultCallback - result: [$result]")
     }
 
     private val locationPermissionRequestLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(), locationActivityResultCallback)
+        ActivityResultContracts.RequestMultiplePermissions(), locationPermissionsResultCallback)
 
     private fun requestLocationPermissions() {
         val hostActivity = activity as AppCompatActivity
         if (hostActivity.hasFineLocationPermissionBeenGranted()) {
-            showLog(Log.INFO, getLogTag(), "requestLocationPermissions - FineLocationPermissionBeenGranted")
+            showLog(Log.INFO, getLogTag(), "requestLocationPermissions - Permission Granted")
         }
         else {
             locationPermissionRequestLauncher.launch(arrayOf(
@@ -140,6 +153,27 @@ class EntryFragment : Fragment() {
                 Manifest.permission.ACCESS_COARSE_LOCATION))
         }
     }
+
+    ///
+
+    private val writeExternalStoragePermissionResultCallback: (Boolean) -> Unit = { result ->
+        showLog(Log.INFO, getLogTag(), "writeExternalStoragePermissionResultCallback - result: [$result]")
+    }
+
+    private val writeExternalStoragePermissionRequestLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(), writeExternalStoragePermissionResultCallback)
+
+    private fun requestWriteExternalStoragePermission() {
+        val hostActivity = activity as AppCompatActivity
+        if(hostActivity.hasWriteExternalStoragePermissionBeenGranted()) {
+            showLog(Log.INFO, getLogTag(), "requestWriteExternalStoragePermission - Permission Granted")
+        }
+        else {
+            writeExternalStoragePermissionRequestLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }
+
+    ///
 
     private val wiFiEnableActivityResultCallback : (ActivityResult) -> Unit = { result ->
         val isResultCodeOk = result.resultCode == Activity.RESULT_OK
@@ -164,4 +198,32 @@ class EntryFragment : Fragment() {
             }
         }
     }
+
+    ///
+
+    private fun runRxTask1() {
+        val disposable: Disposable? = Observable.just("long", "longer", "longest")
+            //.observeOn(AndroidSchedulers.mainThread()) // cannot involve ``observeOn`` here
+            .map(stringToLength)
+            .filter(stringLengthFilter)
+            .subscribeOn(Schedulers.computation())
+            .observeOn(AndroidSchedulers.mainThread())
+            //.subscribeOn(Schedulers.io())
+            //.observeOn(Schedulers.io())
+            .subscribe(integerSubscriber)
+    }
+    private val stringToLength: (String) -> Int = { inputStr ->
+        showLog(Log.INFO, getLogTag(), "stringToLength - inputStr: [$inputStr], ${Thread.currentThread().name}" )
+        inputStr.length
+    }
+
+    private val stringLengthFilter: (Int) -> Boolean = { intValue ->
+        showLog(Log.INFO, getLogTag(), "stringLengthFilter - intValue: [$intValue], ${Thread.currentThread().name}" )
+        intValue > 4
+    }
+
+    private val integerSubscriber: (Int) -> Unit = { result ->
+        showLog(Log.INFO, getLogTag(), "integerSubscriber - result: [$result], ${Thread.currentThread().name}" )
+    }
+
 }
